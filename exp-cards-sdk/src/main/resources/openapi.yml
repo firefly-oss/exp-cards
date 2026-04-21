@@ -1,0 +1,635 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:18080
+  description: Generated server url
+tags:
+- name: Card Issuance Journey
+  description: Endpoints for the card issuance journey workflow
+- name: Card Replacement Journey
+  description: Endpoints for the card replacement journey workflow (lost/stolen)
+- name: Cards
+  description: Card experience operations
+paths:
+  /api/v1/journeys/card-replacement/{journeyId}/identity:
+    post:
+      tags:
+      - Card Replacement Journey
+      summary: Verify Identity
+      description: Submit identity verification for card replacement. Advances the
+        journey past the identity verification gate and triggers replacement card
+        creation.
+      operationId: verifyIdentity
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyIdentityCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/journeys/card-replacement:
+    post:
+      tags:
+      - Card Replacement Journey
+      summary: Report Card Lost/Stolen
+      description: "Start a card replacement journey - blocks the old card, sends\
+        \ security alert, and waits for identity verification"
+      operationId: reportCardLost
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportCardLostCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardReplacementJourneyStatusDTO"
+  /api/v1/journeys/card-issuance/{journeyId}/pin:
+    post:
+      tags:
+      - Card Issuance Journey
+      summary: Setup PIN
+      description: Setup the PIN for the card. Advances the journey past the PIN setup
+        gate and triggers card issuance.
+      operationId: setupPin
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupPinCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/journeys/card-issuance/{journeyId}/address:
+    post:
+      tags:
+      - Card Issuance Journey
+      summary: Confirm Delivery Address
+      description: Submit the delivery address for the card. Advances the journey
+        past the address confirmation gate.
+      operationId: confirmAddress
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmAddressCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/journeys/card-issuance:
+    post:
+      tags:
+      - Card Issuance Journey
+      summary: Initiate Card Issuance
+      description: "Start a new card issuance journey - verifies eligibility, sends\
+        \ welcome notification, and waits for address confirmation"
+      operationId: initiateCardIssuance
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiateCardIssuanceCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardIssuanceJourneyStatusDTO"
+  /api/v1/cards:
+    post:
+      tags:
+      - Cards
+      summary: Issue a new card
+      description: Issues a new card for a customer through the card issuance journey
+      operationId: issueCard
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueCardRequest"
+        required: true
+      responses:
+        "201":
+          description: Card issued successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IssueCardResponse"
+        "400":
+          description: Invalid request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IssueCardResponse"
+  /api/v1/cards/{cardId}/block:
+    post:
+      tags:
+      - Cards
+      summary: Block a card
+      description: Blocks a card temporarily
+      operationId: blockCard
+      parameters:
+      - name: cardId
+        in: path
+        description: Card identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reason
+        in: query
+        description: Reason for blocking
+        required: false
+        schema:
+          type: string
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Card blocked successfully
+        "404":
+          description: Card not found
+  /api/v1/cards/{cardId}/activate:
+    post:
+      tags:
+      - Cards
+      summary: Activate a card
+      description: Activates a card that is in pending activation status
+      operationId: activateCard
+      parameters:
+      - name: cardId
+        in: path
+        description: Card identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Card activated successfully
+        "404":
+          description: Card not found
+  /api/v1/journeys/card-replacement/{journeyId}:
+    get:
+      tags:
+      - Card Replacement Journey
+      summary: Get Journey Status
+      description: "Retrieve the current state of a card replacement journey. Returns\
+        \ completed steps, current phase, and card statuses."
+      operationId: getJourneyStatus
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardReplacementJourneyStatusDTO"
+  /api/v1/journeys/card-issuance/{journeyId}:
+    get:
+      tags:
+      - Card Issuance Journey
+      summary: Get Journey Status
+      description: "Retrieve the current state of a card issuance journey. Returns\
+        \ completed steps, current phase, and next expected action."
+      operationId: getJourneyStatus_1
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardIssuanceJourneyStatusDTO"
+  /api/v1/cards/{cardId}:
+    get:
+      tags:
+      - Cards
+      summary: Get card summary
+      description: Retrieves the card summary including balances and status
+      operationId: getCardSummary
+      parameters:
+      - name: cardId
+        in: path
+        description: Card identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Card found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardSummaryResponse"
+        "404":
+          description: Card not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CardSummaryResponse"
+    delete:
+      tags:
+      - Cards
+      summary: Cancel a card
+      description: Cancels a card permanently
+      operationId: cancelCard
+      parameters:
+      - name: cardId
+        in: path
+        description: Card identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reason
+        in: query
+        description: Reason for cancellation
+        required: false
+        schema:
+          type: string
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Card cancelled successfully
+        "404":
+          description: Card not found
+  /api/v1/cards/customer/{customerId}:
+    get:
+      tags:
+      - Cards
+      summary: Get customer cards
+      description: Retrieves all cards for a specific customer
+      operationId: getCustomerCards
+      parameters:
+      - name: customerId
+        in: path
+        description: Customer identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Cards retrieved
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CardSummaryResponse"
+components:
+  schemas:
+    VerifyIdentityCommand:
+      type: object
+      properties:
+        verificationCode:
+          type: string
+        documentType:
+          type: string
+        documentNumber:
+          type: string
+    ReportCardLostCommand:
+      type: object
+      properties:
+        cardId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        requestPhysicalReplacement:
+          type: boolean
+    CardReplacementJourneyStatusDTO:
+      type: object
+      properties:
+        journeyId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        oldCardId:
+          type: string
+          format: uuid
+        newCardId:
+          type: string
+          format: uuid
+        currentPhase:
+          type: string
+        completedSteps:
+          type: array
+          items:
+            type: string
+        nextStep:
+          type: string
+        oldCardStatus:
+          type: string
+        newCardStatus:
+          type: string
+        isPhysicalReplacement:
+          type: boolean
+    SetupPinCommand:
+      type: object
+      properties:
+        encryptedPin:
+          type: string
+        pinConfirmation:
+          type: string
+    ConfirmAddressCommand:
+      type: object
+      properties:
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+    InitiateCardIssuanceCommand:
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        cardProgramId:
+          type: string
+          format: uuid
+        cardholderName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        virtual:
+          type: boolean
+    CardIssuanceJourneyStatusDTO:
+      type: object
+      properties:
+        journeyId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        cardId:
+          type: string
+          format: uuid
+        currentPhase:
+          type: string
+        completedSteps:
+          type: array
+          items:
+            type: string
+        nextStep:
+          type: string
+        cardStatus:
+          type: string
+        isVirtual:
+          type: boolean
+    IssueCardRequest:
+      required:
+      - accountId
+      - cardProgramId
+      - customerId
+      type: object
+      properties:
+        customerId:
+          type: string
+          description: Customer identifier
+          format: uuid
+        accountId:
+          type: string
+          description: Account identifier to link the card
+          format: uuid
+        cardProgramId:
+          type: string
+          description: Card program identifier
+          format: uuid
+        cardholderName:
+          type: string
+          description: Cardholder name to emboss on card
+        virtual:
+          type: boolean
+          description: Whether to issue as virtual card
+      description: Request to issue a new card
+    IssueCardResponse:
+      type: object
+      properties:
+        cardId:
+          type: string
+          description: Newly created card identifier
+          format: uuid
+        maskedCardNumber:
+          type: string
+          description: Masked card number
+        executionId:
+          type: string
+          description: Execution identifier for tracking
+        status:
+          type: string
+          description: Operation status
+      description: Response after issuing a card
+    CardSummaryResponse:
+      type: object
+      properties:
+        cardId:
+          type: string
+          description: Card unique identifier
+          format: uuid
+        maskedCardNumber:
+          type: string
+          description: Masked card number
+        cardType:
+          type: string
+          description: "Card type (DEBIT, CREDIT, PREPAID)"
+        status:
+          type: string
+          description: Card status
+        cardholderName:
+          type: string
+          description: Cardholder name
+        expirationDate:
+          type: string
+          description: Expiration date
+          format: date
+        availableBalance:
+          type: number
+          description: Available credit/balance
+        currentBalance:
+          type: number
+          description: Current balance
+        currency:
+          type: string
+          description: Currency code
+        virtual:
+          type: boolean
+          description: Whether this is a virtual card
+      description: Card summary for experience layer
