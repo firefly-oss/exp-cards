@@ -47,10 +47,10 @@ firefly:
 api-configuration:
   domain-platform:
     banking-cards:
-      base-path: http://localhost:8091
+      base-path: ${ENDPOINT_DOMAIN_BANKING_CARDS:http://localhost:8091}
       timeout: 10s
     common-notifications:
-      base-path: http://localhost:8082
+      base-path: ${ENDPOINT_DOMAIN_COMMON_NOTIFICATIONS:http://localhost:8082}
       timeout: 5s
 
 server:
