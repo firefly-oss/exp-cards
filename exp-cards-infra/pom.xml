@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>exp-cards-infra</artifactId>
+    <name>exp-cards-infra</name>
 
     <dependencies>
         <dependency>

@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>exp-cards-interfaces</artifactId>
+    <name>exp-cards-interfaces</name>
 
     <dependencies>
         <dependency>

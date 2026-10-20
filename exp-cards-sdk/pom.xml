@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>exp-cards-sdk</artifactId>
+    <name>exp-cards-sdk</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
