@@ -6,25 +6,25 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.firefly</groupId>
+        <groupId>io.fireflysoftware</groupId>
         <artifactId>exp-cards</artifactId>
-        <version>26.10.2</version>
+        <version>26.10.3</version>
     </parent>
 
     <artifactId>exp-cards-web</artifactId>
 
     <properties>
         <openapi.gen.skip>false</openapi.gen.skip>
-        <openapi.gen.mainClass>com.firefly.experience.cards.web.openapi.OpenApiGenApplication</openapi.gen.mainClass>
+        <openapi.gen.mainClass>io.fireflysoftware.experience.cards.web.openapi.OpenApiGenApplication</openapi.gen.mainClass>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>com.firefly</groupId>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>exp-cards-interfaces</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.firefly</groupId>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>exp-cards-core</artifactId>
         </dependency>
         <dependency>

@@ -83,7 +83,7 @@ springdoc:
     operationsSorter: method
     docExpansion: none
     filter: true
-  packages-to-scan: com.firefly.experience.cards.web.controllers
+  packages-to-scan: io.fireflysoftware.experience.cards.web.controllers
   paths-to-match: /api/**
 
 management:
@@ -105,7 +105,7 @@ management:
 logging:
   level:
     root: INFO
-    com.firefly.experience.cards: DEBUG
+    io.fireflysoftware.experience.cards: DEBUG
     org.fireflyframework: DEBUG
 
 ---
@@ -137,7 +137,7 @@ spring:
 
 logging:
   level:
-    com.firefly: DEBUG
+    io.fireflysoftware: DEBUG
 
 ---
 spring:
@@ -147,7 +147,7 @@ spring:
 
 logging:
   level:
-    com.firefly: INFO
+    io.fireflysoftware: INFO
 
 springdoc:
   api-docs:
