@@ -8,7 +8,7 @@
     <parent>
         <groupId>io.fireflysoftware</groupId>
         <artifactId>exp-cards</artifactId>
-        <version>26.10.3</version>
+        <version>26.10.4</version>
     </parent>
 
     <artifactId>exp-cards-core</artifactId>

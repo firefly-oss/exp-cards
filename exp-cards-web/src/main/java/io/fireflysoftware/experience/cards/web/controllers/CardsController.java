@@ -19,6 +19,8 @@ package io.fireflysoftware.experience.cards.web.controllers;
 
 import io.fireflysoftware.experience.cards.core.services.CardExperienceService;
 import io.fireflysoftware.experience.cards.interfaces.dtos.CardSummaryResponse;
+import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardRequest;
+import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -47,6 +49,13 @@ import java.util.UUID;
 public class CardsController {
 
     private final CardExperienceService cardService;
+
+    @PostMapping
+    @Operation(summary = "Issue a card", description = "Checks access, then issues the card through the domain port")
+    public Mono<ResponseEntity<IssueCardResponse>> issueCard(@Valid @RequestBody IssueCardRequest request) {
+        return cardService.issueCard(request)
+                .map(body -> ResponseEntity.status(HttpStatus.CREATED).body(body));
+    }
 
     @GetMapping("/{cardId}")
     @Operation(
