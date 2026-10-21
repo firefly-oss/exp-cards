@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.cards.core.services;
 
+import io.fireflysoftware.experience.cards.core.limits.CardLimitView;
 import io.fireflysoftware.experience.cards.core.ports.AccessAction;
 import io.fireflysoftware.experience.cards.core.ports.AccessGuard;
 import io.fireflysoftware.experience.cards.core.ports.IdentityPort;
@@ -30,6 +31,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -76,5 +79,20 @@ public class CardExperienceServiceImpl implements CardExperienceService {
         return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
                 AccessRequest.of(cardId, AccessAction.CLOSE, "CARD", cardId),
                 () -> cardOperations.cancel(cardId, reason));
+    }
+
+    @Override
+    public Mono<Void> updateLimits(UUID cardId, UUID limitId, BigDecimal dailyLimit, BigDecimal monthlyLimit,
+                                   BigDecimal transactionLimit, String limitType) {
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(cardId, AccessAction.UPDATE, "CARD", cardId),
+                () -> cardOperations.updateLimits(cardId, limitId, dailyLimit, monthlyLimit, transactionLimit, limitType));
+    }
+
+    @Override
+    public Mono<List<CardLimitView>> limits(UUID cardId) {
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(cardId, AccessAction.READ, "CARD", cardId),
+                () -> cardOperations.limits(cardId));
     }
 }

@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.cards.web.controllers;
 
+import io.fireflysoftware.experience.cards.core.limits.CardLimitView;
 import io.fireflysoftware.experience.cards.core.services.CardExperienceService;
 import io.fireflysoftware.experience.cards.interfaces.dtos.CardSummaryResponse;
 import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardRequest;
@@ -33,13 +34,15 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -116,5 +119,23 @@ public class CardsController {
             @RequestParam(required = false) String reason) {
         return cardService.cancelCard(cardId, reason)
                 .then(Mono.just(ResponseEntity.noContent().<Void>build()));
+    }
+
+    @PutMapping("/{cardId}/limits/{limitId}")
+    @Operation(summary = "Set card limits", description = "Checks access, then stores the spending limits through the domain port")
+    public Mono<ResponseEntity<Void>> updateLimits(@PathVariable UUID cardId, @PathVariable UUID limitId,
+                                                    @RequestBody LimitBody body) {
+        return cardService.updateLimits(cardId, limitId, body.dailyLimit(), body.monthlyLimit(),
+                        body.transactionLimit(), body.limitType())
+                .then(Mono.just(ResponseEntity.noContent().<Void>build()));
+    }
+
+    @GetMapping("/{cardId}/limits")
+    @Operation(summary = "Read card limits", description = "Checks access, then reads the spending limits through the domain port")
+    public Mono<ResponseEntity<List<CardLimitView>>> limits(@PathVariable UUID cardId) {
+        return cardService.limits(cardId).map(ResponseEntity::ok);
+    }
+
+    public record LimitBody(BigDecimal dailyLimit, BigDecimal monthlyLimit, BigDecimal transactionLimit, String limitType) {
     }
 }

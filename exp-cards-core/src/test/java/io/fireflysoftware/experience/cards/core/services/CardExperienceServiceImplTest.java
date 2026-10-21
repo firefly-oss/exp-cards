@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.cards.core.services;
 
+import io.fireflysoftware.experience.cards.core.limits.CardLimitView;
 import io.fireflysoftware.experience.cards.core.ports.AccessDecision;
 import io.fireflysoftware.experience.cards.core.ports.AccessDeniedException;
 import io.fireflysoftware.experience.cards.core.ports.AccessPort;
@@ -33,6 +34,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -99,5 +102,43 @@ class CardExperienceServiceImplTest {
 
         StepVerifier.create(service.activateCard(cardId)).verifyComplete();
         verify(cardOperations).activate(cardId);
+    }
+
+    @Test
+    void updateLimits_checksAccessThenDomainPort() {
+        UUID cardId = UUID.randomUUID();
+        UUID limitId = UUID.randomUUID();
+        when(accessPort.check(any())).thenReturn(Mono.just(AccessDecision.grant()));
+        when(cardOperations.updateLimits(cardId, limitId, new BigDecimal("200.00"), new BigDecimal("1000.00"),
+                new BigDecimal("50.00"), "DAILY_SPENDING")).thenReturn(Mono.empty());
+
+        StepVerifier.create(service.updateLimits(cardId, limitId, new BigDecimal("200.00"),
+                new BigDecimal("1000.00"), new BigDecimal("50.00"), "DAILY_SPENDING")).verifyComplete();
+        verify(cardOperations).updateLimits(cardId, limitId, new BigDecimal("200.00"),
+                new BigDecimal("1000.00"), new BigDecimal("50.00"), "DAILY_SPENDING");
+    }
+
+    @Test
+    void updateLimits_deniedDoesNotCallDomain() {
+        UUID cardId = UUID.randomUUID();
+        when(accessPort.check(any())).thenReturn(Mono.just(AccessDecision.denied("no")));
+
+        StepVerifier.create(service.updateLimits(cardId, UUID.randomUUID(), new BigDecimal("1"),
+                null, null, "DAILY_SPENDING"))
+                .expectError(AccessDeniedException.class)
+                .verify();
+        verify(cardOperations, never()).updateLimits(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void limits_readsThroughTheDomainPort() {
+        UUID cardId = UUID.randomUUID();
+        CardLimitView limit = new CardLimitView(UUID.randomUUID(), "DAILY_SPENDING", new BigDecimal("200.00"));
+        when(accessPort.check(any())).thenReturn(Mono.just(AccessDecision.grant()));
+        when(cardOperations.limits(cardId)).thenReturn(Mono.just(List.of(limit)));
+
+        StepVerifier.create(service.limits(cardId))
+                .assertNext(rows -> assertThat(rows).containsExactly(limit))
+                .verifyComplete();
     }
 }

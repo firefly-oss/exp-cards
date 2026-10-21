@@ -18,8 +18,11 @@
 package io.fireflysoftware.experience.cards.core.adapter;
 
 import io.fireflysoftware.domain.banking.cards.sdk.api.CardBackofficeApi;
+import io.fireflysoftware.domain.banking.cards.sdk.api.CardLimitsApi;
 import io.fireflysoftware.domain.banking.cards.sdk.api.CardsApi;
 import io.fireflysoftware.domain.banking.cards.sdk.model.IssueCardCommand;
+import io.fireflysoftware.domain.banking.cards.sdk.model.UpdateCardLimitsCommand;
+import io.fireflysoftware.experience.cards.core.limits.CardLimitView;
 import io.fireflysoftware.experience.cards.core.ports.CardOperations;
 import io.fireflysoftware.experience.cards.interfaces.dtos.CardSummaryResponse;
 import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardRequest;
@@ -29,6 +32,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -41,6 +46,7 @@ public class DomainCardAdapter implements CardOperations {
 
     private final CardsApi cardsApi;
     private final CardBackofficeApi cardBackofficeApi;
+    private final CardLimitsApi cardLimitsApi;
 
     @Override
     public Mono<IssueCardResponse> issue(IssueCardRequest request) {
@@ -82,5 +88,28 @@ public class DomainCardAdapter implements CardOperations {
     public Mono<Void> cancel(UUID cardId, String reason) {
         return cardsApi.cancelCard(cardId, reason == null ? "CUSTOMER_REQUEST" : reason,
                 "CUSTOMER", UUID.randomUUID().toString()).then();
+    }
+
+    @Override
+    public Mono<Void> updateLimits(UUID cardId, UUID limitId, BigDecimal dailyLimit, BigDecimal monthlyLimit,
+                                   BigDecimal transactionLimit, String limitType) {
+        UpdateCardLimitsCommand command = new UpdateCardLimitsCommand();
+        command.setCardId(cardId);
+        command.setLimitId(limitId);
+        command.setDailyLimit(dailyLimit);
+        command.setMonthlyLimit(monthlyLimit);
+        command.setTransactionLimit(transactionLimit);
+        command.setLimitType(limitType);
+        return cardLimitsApi.updateLimits(cardId, limitId, command, UUID.randomUUID().toString()).then();
+    }
+
+    @Override
+    public Mono<List<CardLimitView>> limits(UUID cardId) {
+        return cardBackofficeApi.getCardLimits(cardId, UUID.randomUUID().toString())
+                .map(row -> new CardLimitView(
+                        row.getCardLimitId(),
+                        row.getLimitType() == null ? null : row.getLimitType().getValue(),
+                        row.getLimitAmount()))
+                .collectList();
     }
 }

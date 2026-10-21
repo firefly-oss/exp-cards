@@ -18,6 +18,7 @@
 package io.fireflysoftware.experience.cards.infra.factories;
 
 import io.fireflysoftware.domain.banking.cards.sdk.api.CardBackofficeApi;
+import io.fireflysoftware.domain.banking.cards.sdk.api.CardLimitsApi;
 import io.fireflysoftware.domain.banking.cards.sdk.api.CardsApi;
 import io.fireflysoftware.domain.banking.cards.sdk.invoker.ApiClient;
 import io.fireflysoftware.experience.cards.infra.properties.DomainBankingCardsProperties;
@@ -42,5 +43,10 @@ public class DomainBankingCardsClientFactory {
     @Bean
     public CardBackofficeApi cardBackofficeApi() {
         return new CardBackofficeApi(apiClient);
+    }
+
+    @Bean
+    public CardLimitsApi cardLimitsApi() {
+        return new CardLimitsApi(apiClient);
     }
 }

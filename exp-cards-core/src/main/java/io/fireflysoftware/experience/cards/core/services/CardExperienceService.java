@@ -17,11 +17,14 @@
 
 package io.fireflysoftware.experience.cards.core.services;
 
+import io.fireflysoftware.experience.cards.core.limits.CardLimitView;
 import io.fireflysoftware.experience.cards.interfaces.dtos.CardSummaryResponse;
 import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardRequest;
 import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardResponse;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public interface CardExperienceService {
@@ -35,4 +38,9 @@ public interface CardExperienceService {
     Mono<Void> blockCard(UUID cardId, String reason);
 
     Mono<Void> cancelCard(UUID cardId, String reason);
+
+    Mono<Void> updateLimits(UUID cardId, UUID limitId, BigDecimal dailyLimit, BigDecimal monthlyLimit,
+                            BigDecimal transactionLimit, String limitType);
+
+    Mono<List<CardLimitView>> limits(UUID cardId);
 }
