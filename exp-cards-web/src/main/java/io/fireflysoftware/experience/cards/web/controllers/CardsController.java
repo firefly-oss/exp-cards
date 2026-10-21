@@ -63,18 +63,6 @@ public class CardsController {
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/customer/{customerId}")
-    @Operation(
-            summary = "Get customer cards",
-            description = "Retrieves all cards for a specific customer"
-    )
-    @ApiResponse(responseCode = "200", description = "Cards retrieved")
-    public Flux<CardSummaryResponse> getCustomerCards(
-            @Parameter(description = "Customer identifier")
-            @PathVariable UUID customerId) {
-        return cardService.getCustomerCards(customerId);
-    }
-
     @PostMapping("/{cardId}/activate")
     @Operation(
             summary = "Activate a card",

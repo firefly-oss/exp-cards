@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.cards.core.adapter;
 
+import io.fireflysoftware.domain.banking.cards.sdk.api.CardBackofficeApi;
 import io.fireflysoftware.domain.banking.cards.sdk.api.CardsApi;
 import io.fireflysoftware.domain.banking.cards.sdk.model.IssueCardCommand;
 import io.fireflysoftware.experience.cards.core.ports.CardOperations;
@@ -39,6 +40,7 @@ import java.util.UUID;
 public class DomainCardAdapter implements CardOperations {
 
     private final CardsApi cardsApi;
+    private final CardBackofficeApi cardBackofficeApi;
 
     @Override
     public Mono<IssueCardResponse> issue(IssueCardRequest request) {
@@ -56,7 +58,7 @@ public class DomainCardAdapter implements CardOperations {
 
     @Override
     public Mono<CardSummaryResponse> get(UUID cardId) {
-        return cardsApi.getCard(cardId, UUID.randomUUID().toString())
+        return cardBackofficeApi.getCard(cardId, UUID.randomUUID().toString())
                 .map(card -> CardSummaryResponse.builder()
                         .cardId(card.getCardId())
                         .maskedCardNumber(card.getCardNumber())

@@ -96,49 +96,6 @@ class CardsControllerTest {
     }
 
     @Test
-    void getCustomerCards_returnsListOfCards() {
-        UUID customerId = UUID.randomUUID();
-        UUID cardId1 = UUID.randomUUID();
-        UUID cardId2 = UUID.randomUUID();
-
-        CardSummaryResponse card1 = CardSummaryResponse.builder()
-                .cardId(cardId1)
-                .maskedCardNumber("**** **** **** 1234")
-                .cardType("DEBIT")
-                .status("ACTIVE")
-                .cardholderName("John Doe")
-                .currency("EUR")
-                .virtual(false)
-                .build();
-
-        CardSummaryResponse card2 = CardSummaryResponse.builder()
-                .cardId(cardId2)
-                .maskedCardNumber("**** **** **** 5678")
-                .cardType("CREDIT")
-                .status("ACTIVE")
-                .cardholderName("John Doe")
-                .currency("EUR")
-                .virtual(true)
-                .build();
-
-        when(cardService.getCustomerCards(customerId))
-                .thenReturn(Flux.just(card1, card2));
-
-        StepVerifier.create(controller.getCustomerCards(customerId))
-                .assertNext(response -> {
-                    assertThat(response.getCardId()).isEqualTo(cardId1);
-                    assertThat(response.getCardType()).isEqualTo("DEBIT");
-                    assertThat(response.getVirtual()).isFalse();
-                })
-                .assertNext(response -> {
-                    assertThat(response.getCardId()).isEqualTo(cardId2);
-                    assertThat(response.getCardType()).isEqualTo("CREDIT");
-                    assertThat(response.getVirtual()).isTrue();
-                })
-                .verifyComplete();
-    }
-
-    @Test
     void activateCard_returnsNoContent() {
         UUID cardId = UUID.randomUUID();
 

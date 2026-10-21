@@ -17,92 +17,87 @@
 
 package io.fireflysoftware.experience.cards.core.services;
 
+import io.fireflysoftware.experience.cards.core.ports.AccessDecision;
+import io.fireflysoftware.experience.cards.core.ports.AccessDeniedException;
+import io.fireflysoftware.experience.cards.core.ports.AccessPort;
+import io.fireflysoftware.experience.cards.core.ports.IdentityPort;
+import io.fireflysoftware.experience.cards.core.ports.SubjectRef;
+import io.fireflysoftware.experience.cards.core.ports.CardOperations;
 import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardRequest;
+import io.fireflysoftware.experience.cards.interfaces.dtos.IssueCardResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-/**
- * Tests for CardExperienceServiceImpl stub implementation.
- *
- * Note: This service is currently a stub awaiting domain-banking-cards SDK integration.
- * Tests verify the stub behavior (placeholder responses, exceptions for unsupported operations).
- */
+@ExtendWith(MockitoExtension.class)
 class CardExperienceServiceImplTest {
+
+    @Mock private IdentityPort identityPort;
+    @Mock private AccessPort accessPort;
+    @Mock private CardOperations cardOperations;
 
     private CardExperienceServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new CardExperienceServiceImpl();
+        lenient().when(identityPort.resolve(any())).thenReturn(Mono.just(new SubjectRef(IdentityPort.SAMPLE_ACTOR, "sandbox")));
+        service = new CardExperienceServiceImpl(identityPort, accessPort, cardOperations);
     }
 
     @Test
-    void issueCard_returnsPendingResponse() {
-        UUID customerId = UUID.randomUUID();
-        UUID accountId = UUID.randomUUID();
-        UUID cardProgramId = UUID.randomUUID();
-
+    void issueCard_checksAccessThenDomainPort() {
         IssueCardRequest request = IssueCardRequest.builder()
-                .customerId(customerId)
-                .accountId(accountId)
-                .cardProgramId(cardProgramId)
+                .customerId(UUID.randomUUID())
+                .accountId(UUID.randomUUID())
+                .cardProgramId(UUID.randomUUID())
                 .build();
+        IssueCardResponse response = IssueCardResponse.builder()
+                .cardId(UUID.randomUUID())
+                .status("ISSUED")
+                .build();
+        when(accessPort.check(any())).thenReturn(Mono.just(AccessDecision.grant()));
+        when(cardOperations.issue(request)).thenReturn(Mono.just(response));
 
         StepVerifier.create(service.issueCard(request))
-                .assertNext(response -> {
-                    assertThat(response).isNotNull();
-                    assertThat(response.getCardId()).isNotNull();
-                    assertThat(response.getExecutionId()).isNotNull();
-                    assertThat(response.getStatus()).isEqualTo("PENDING_SDK_INTEGRATION");
-                })
+                .assertNext(body -> assertThat(body.getStatus()).isEqualTo("ISSUED"))
                 .verifyComplete();
     }
 
     @Test
-    void getCardSummary_returnsEmpty() {
-        UUID cardId = UUID.randomUUID();
+    void issueCard_deniedDoesNotCallDomain() {
+        IssueCardRequest request = IssueCardRequest.builder()
+                .customerId(UUID.randomUUID())
+                .accountId(UUID.randomUUID())
+                .cardProgramId(UUID.randomUUID())
+                .build();
+        when(accessPort.check(any())).thenReturn(Mono.just(AccessDecision.denied("no")));
 
-        StepVerifier.create(service.getCardSummary(cardId))
-                .verifyComplete();
-    }
-
-    @Test
-    void getCustomerCards_throwsUnsupportedOperationException() {
-        UUID customerId = UUID.randomUUID();
-
-        StepVerifier.create(service.getCustomerCards(customerId))
-                .expectError(UnsupportedOperationException.class)
+        StepVerifier.create(service.issueCard(request))
+                .expectError(AccessDeniedException.class)
                 .verify();
+        verify(cardOperations, never()).issue(any());
     }
 
     @Test
-    void activateCard_completesSuccessfully() {
+    void activateCard_callsDomainPort() {
         UUID cardId = UUID.randomUUID();
+        when(accessPort.check(any())).thenReturn(Mono.just(AccessDecision.grant()));
+        when(cardOperations.activate(cardId)).thenReturn(Mono.empty());
 
-        StepVerifier.create(service.activateCard(cardId))
-                .verifyComplete();
-    }
-
-    @Test
-    void blockCard_completesSuccessfully() {
-        UUID cardId = UUID.randomUUID();
-        String reason = "Lost card";
-
-        StepVerifier.create(service.blockCard(cardId, reason))
-                .verifyComplete();
-    }
-
-    @Test
-    void cancelCard_completesSuccessfully() {
-        UUID cardId = UUID.randomUUID();
-        String reason = "Customer request";
-
-        StepVerifier.create(service.cancelCard(cardId, reason))
-                .verifyComplete();
+        StepVerifier.create(service.activateCard(cardId)).verifyComplete();
+        verify(cardOperations).activate(cardId);
     }
 }
