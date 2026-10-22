@@ -8,7 +8,7 @@
     <parent>
         <groupId>io.fireflysoftware</groupId>
         <artifactId>exp-cards</artifactId>
-        <version>26.10.5</version>
+        <version>26.10.6</version>
     </parent>
 
     <artifactId>exp-cards-core</artifactId>
@@ -27,12 +27,12 @@
         <dependency>
             <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-core-security-center-sdk</artifactId>
-            <version>26.10.5</version>
+            <version>26.10.6</version>
         </dependency>
         <dependency>
             <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-customer-people-sdk</artifactId>
-            <version>26.10.5</version>
+            <version>26.10.6</version>
         </dependency>
 
         <!-- Framework (includes webflux, utils, web, etc.) -->
