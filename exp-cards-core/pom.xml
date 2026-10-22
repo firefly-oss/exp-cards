@@ -24,6 +24,16 @@
             <groupId>io.fireflysoftware</groupId>
             <artifactId>exp-cards-infra</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-core-security-center-sdk</artifactId>
+            <version>26.10.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-customer-people-sdk</artifactId>
+            <version>26.10.5</version>
+        </dependency>
 
         <!-- Framework (includes webflux, utils, web, etc.) -->
         <dependency>

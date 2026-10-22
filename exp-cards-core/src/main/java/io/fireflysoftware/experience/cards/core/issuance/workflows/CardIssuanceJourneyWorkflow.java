@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fireflysoftware.domain.banking.cards.sdk.api.CardsApi;
 import io.fireflysoftware.domain.banking.cards.sdk.model.IssueCardCommand;
 import io.fireflysoftware.domain.common.notifications.sdk.api.NotificationsApi;
+import io.fireflysoftware.domain.people.sdk.api.CustomersApi;
 import io.fireflysoftware.domain.common.notifications.sdk.model.SendNotificationCommand;
 import io.fireflysoftware.experience.cards.core.issuance.commands.ConfirmAddressCommand;
 import io.fireflysoftware.experience.cards.core.issuance.commands.InitiateCardIssuanceCommand;
@@ -105,6 +106,7 @@ public class CardIssuanceJourneyWorkflow {
 
     private final CardsApi cardsApi;
     private final NotificationsApi notificationsApi;
+    private final CustomersApi customersApi;
     private final ObjectMapper objectMapper;
 
     @WorkflowStep(id = STEP_REQUEST_CARD)
@@ -119,7 +121,13 @@ public class CardIssuanceJourneyWorkflow {
     public Mono<Boolean> verifyEligibility(@Variable(VAR_CUSTOMER_ID) UUID customerId,
                                             @Input InitiateCardIssuanceCommand cmd) {
         log.info("Verifying card eligibility for customer: {}", customerId);
-        return Mono.just(true);
+        return customersApi.getCustomerInfo(customerId, UUID.randomUUID().toString())
+                .flatMap(person -> {
+                    if (person == null || person.getPartyId() == null || !customerId.equals(person.getPartyId())) {
+                        return Mono.error(new IllegalStateException("PARTY_NOT_RECORDED"));
+                    }
+                    return Mono.just(true);
+                });
     }
 
     @WorkflowStep(id = STEP_SEND_WELCOME, dependsOn = STEP_REQUEST_CARD)

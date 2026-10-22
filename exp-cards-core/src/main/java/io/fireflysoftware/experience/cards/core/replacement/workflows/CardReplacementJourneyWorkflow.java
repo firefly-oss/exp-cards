@@ -18,9 +18,10 @@
 package io.fireflysoftware.experience.cards.core.replacement.workflows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fireflysoftware.domain.banking.cards.sdk.api.CardBackofficeApi;
 import io.fireflysoftware.domain.banking.cards.sdk.api.CardsApi;
-import io.fireflysoftware.domain.banking.cards.sdk.model.IssueCardCommand;
 import io.fireflysoftware.domain.common.notifications.sdk.api.NotificationsApi;
+import io.fireflysoftware.domain.people.sdk.api.PartyContactQueriesApi;
 import io.fireflysoftware.domain.common.notifications.sdk.model.SendNotificationCommand;
 import io.fireflysoftware.experience.cards.core.replacement.commands.ReportCardLostCommand;
 import io.fireflysoftware.experience.cards.core.replacement.commands.VerifyIdentityCommand;
@@ -101,7 +102,9 @@ public class CardReplacementJourneyWorkflow {
     private static final String TEMPLATE_REPLACEMENT = "CARD_REPLACEMENT_READY";
 
     private final CardsApi cardsApi;
+    private final CardBackofficeApi cardBackofficeApi;
     private final NotificationsApi notificationsApi;
+    private final PartyContactQueriesApi partyContactQueriesApi;
     private final ObjectMapper objectMapper;
 
     @WorkflowStep(id = STEP_REPORT_LOST)
@@ -146,25 +149,37 @@ public class CardReplacementJourneyWorkflow {
     public Mono<Boolean> verifyIdentity(@Variable(VAR_CUSTOMER_ID) UUID customerId,
                                          Object signalData) {
         VerifyIdentityCommand cmd = mapSignalPayload(signalData, VerifyIdentityCommand.class);
-        log.info("Identity verified for customer: {} with document: {}",
-                customerId, cmd.getDocumentType());
-        return Mono.just(true);
+        if (cmd.getDocumentNumber() == null || cmd.getDocumentNumber().isBlank()) {
+            return Mono.error(new IllegalStateException("IDENTITY_DOCUMENT_REQUIRED"));
+        }
+        String expected = cmd.getDocumentNumber().trim();
+        return partyContactQueriesApi.getPartyIdentityDocuments(customerId, UUID.randomUUID().toString())
+                .flatMap(page -> {
+                    boolean recorded = page.getContent() != null && page.getContent().stream()
+                            .anyMatch(row -> sameDocumentNumber(row, expected));
+                    if (!recorded) {
+                        return Mono.error(new IllegalStateException("IDENTITY_DOCUMENT_NOT_ON_FILE"));
+                    }
+                    log.info("Identity document on file for customer: {}", customerId);
+                    return Mono.just(true);
+                });
     }
 
     @WorkflowStep(id = STEP_CREATE_REPLACEMENT, dependsOn = STEP_VERIFY_IDENTITY,
                   compensatable = true, compensationMethod = "compensateCancelNewCard")
     @SetVariable(VAR_NEW_CARD_ID)
     public Mono<UUID> createReplacementCard(@Variable(VAR_CUSTOMER_ID) UUID customerId,
-                                             @Variable(VAR_OLD_CARD_ID) UUID oldCardId) {
-        IssueCardCommand issueCmd = new IssueCardCommand();
-        issueCmd.setCustomerId(customerId);
-
-        return cardsApi.issueCard(issueCmd, UUID.randomUUID().toString())
-                .map(response -> {
-                    UUID newCardId = response.getCardId();
-                    log.info("Replacement card created: newCardId={} replacing oldCardId={}",
-                            newCardId, oldCardId);
-                    return newCardId;
+                                             @Variable(VAR_OLD_CARD_ID) UUID oldCardId,
+                                             @Input ReportCardLostCommand cmd) {
+        String reason = cmd.getReason() == null || cmd.getReason().isBlank() ? "LOST" : cmd.getReason();
+        return cardsApi.replaceCard(oldCardId, reason, true, true, UUID.randomUUID().toString())
+                .flatMap(response -> {
+                    if (response.getNewCardId() == null) {
+                        return Mono.error(new IllegalStateException("CARD_REPLACEMENT_NOT_RECORDED"));
+                    }
+                    log.info("Replacement card {} status {} replaces {} for customer {}",
+                            response.getNewCardId(), response.getStatus(), oldCardId, customerId);
+                    return Mono.just(response.getNewCardId());
                 });
     }
 
@@ -172,8 +187,15 @@ public class CardReplacementJourneyWorkflow {
     public Mono<Void> activateOrShipCard(@Variable(VAR_NEW_CARD_ID) UUID newCardId,
                                           @Variable(VAR_IS_PHYSICAL) Boolean isPhysical) {
         if (Boolean.TRUE.equals(isPhysical)) {
-            log.info("Physical card shipment initiated for cardId={}", newCardId);
-            return Mono.empty();
+            return cardBackofficeApi.getPhysicalCard(newCardId, UUID.randomUUID().toString())
+                    .flatMap(card -> {
+                        if (card == null || card.getPhysicalCardId() == null) {
+                            return Mono.error(new IllegalStateException("PHYSICAL_CARD_NOT_RECORDED"));
+                        }
+                        log.info("Physical card {} manufacturing status {}",
+                                card.getPhysicalCardId(), card.getManufacturingStatus());
+                        return Mono.<Void>empty();
+                    });
         } else {
             String activationCode = UUID.randomUUID().toString().substring(0, 8);
             return cardsApi.activateCard(newCardId, activationCode, UUID.randomUUID().toString())
@@ -298,6 +320,14 @@ public class CardReplacementJourneyWorkflow {
 
     private <T> T mapSignalPayload(Object signalData, Class<T> type) {
         return objectMapper.convertValue(signalData, type);
+    }
+
+    private static boolean sameDocumentNumber(Object row, String expected) {
+        if (!(row instanceof Map<?, ?> map)) {
+            return false;
+        }
+        Object number = map.get("documentNumber");
+        return number != null && expected.equals(String.valueOf(number).trim());
     }
 
     private UUID toUuid(Object value) {

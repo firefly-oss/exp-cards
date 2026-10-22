@@ -24,6 +24,11 @@
             <artifactId>domain-common-notifications-sdk</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-customer-people-sdk</artifactId>
+            <version>26.10.5</version>
+        </dependency>
+        <dependency>
             <groupId>org.fireflyframework</groupId>
             <artifactId>fireflyframework-utils</artifactId>
         </dependency>
