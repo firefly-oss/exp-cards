@@ -112,8 +112,14 @@ public class CardReplacementJourneyWorkflow {
     public Mono<UUID> reportCardLost(@Input ReportCardLostCommand cmd, ExecutionContext ctx) {
         ctx.putVariable(VAR_CUSTOMER_ID, cmd.getCustomerId());
         ctx.putVariable(VAR_IS_PHYSICAL, cmd.getRequestPhysicalReplacement() != null && cmd.getRequestPhysicalReplacement());
-        log.info("Card reported lost/stolen: cardId={} for customer: {}", cmd.getCardId(), cmd.getCustomerId());
-        return Mono.just(cmd.getCardId());
+        return cardBackofficeApi.getCard(cmd.getCardId(), UUID.randomUUID().toString())
+                .map(card -> {
+                    if (card == null || card.getCardId() == null) {
+                        throw new IllegalStateException("CARD_NOT_RECORDED");
+                    }
+                    log.info("Card reported lost/stolen: cardId={} for customer: {}", card.getCardId(), cmd.getCustomerId());
+                    return card.getCardId();
+                });
     }
 
     @WorkflowStep(id = STEP_BLOCK_OLD_CARD, dependsOn = STEP_REPORT_LOST,

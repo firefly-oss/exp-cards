@@ -113,8 +113,14 @@ public class CardIssuanceJourneyWorkflow {
     @SetVariable(VAR_CUSTOMER_ID)
     public Mono<UUID> requestCard(@Input InitiateCardIssuanceCommand cmd, ExecutionContext ctx) {
         ctx.putVariable(VAR_IS_VIRTUAL, cmd.getVirtual() != null && cmd.getVirtual());
-        log.info("Card issuance requested for customer: {}", cmd.getCustomerId());
-        return Mono.just(cmd.getCustomerId());
+        return customersApi.getCustomerInfo(cmd.getCustomerId(), UUID.randomUUID().toString())
+                .map(person -> {
+                    if (person == null || person.getPartyId() == null) {
+                        throw new IllegalStateException("PARTY_NOT_RECORDED");
+                    }
+                    log.info("Card issuance requested for customer: {}", person.getPartyId());
+                    return person.getPartyId();
+                });
     }
 
     @WorkflowStep(id = STEP_VERIFY_ELIGIBILITY, dependsOn = STEP_REQUEST_CARD)
